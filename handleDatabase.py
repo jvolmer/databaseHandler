@@ -25,7 +25,7 @@ class SQLIdentifier:
         return self.value
         # value = self.value.encode('utf-8', 'strict').decode('utf-8')
         # return '"{}"'.format(value.replace('"', '""'))
-
+        
 
 class Database:
     '''Interacts with the SQLite-Database'''
@@ -48,9 +48,9 @@ class Database:
 
     @staticmethod
     def createFieldheaderString(table):
-        '''Creates a string of fieldnames and types of table that can be used to create a db-table'''
+        '''Creates a string of fieldnames and types of table to be used to create a db-table'''
         fieldtypes = table.getFields()
-        return '(' + ', '.join(field + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
+        return '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
     
     def __setitem__(self, tablename, table):
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''

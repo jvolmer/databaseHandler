@@ -331,8 +331,8 @@ class TestTableCombination(unittest.TestCase):
         
         assertTableEqual(actual, expected)
         
-class TestDatabase(unittest.TestCase):
-    def testDatabaseOpening(self):
+class TestDatabaseIO(unittest.TestCase):
+    def testReadAndWriteFromAndToTable(self):
         table1 = handleDatabase.Table(
             indexFieldName = 'id',
             content = [
@@ -347,20 +347,33 @@ class TestDatabase(unittest.TestCase):
 
         assertTableEqual(table1, table2)
 
+    def testWritingWithNonvalidFieldName(self):
+        table1 = handleDatabase.Table(
+            indexFieldName = 'id',
+            content = [
+                {'id': 0, 'new type': 'fruit'}
+            ]
+        )
 
-    def testSQLIdentifierValidString(self):
+        with handleDatabase.Database('food.db') as db:
+            with self.assertRaises(handleDatabase.InputError):
+                db['food'] = table1
+
+
+class TestSQLIdentifier(unittest.TestCase):
+    def testValidString(self):
         string = 'blablablaJaj_akdiepow948833dsfjdfi'
 
         expected = string
-        actual = str(handleDatabase.SQLIdentifier(string))
+        actual = repr(handleDatabase.SQLIdentifier(string))
 
         self.assertEqual(expected, actual)
 
-    def testSQLIdentifierInvalidString(self):
+    def testInvalidString(self):
         string = 'kifeifiejfi e'
 
         with self.assertRaises(handleDatabase.InputError):
-            str(handleDatabase.SQLIdentifier(string))
+            repr(handleDatabase.SQLIdentifier(string))
         
 if __name__ == '__main__':
     unittest.main()
