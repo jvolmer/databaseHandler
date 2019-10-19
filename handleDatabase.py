@@ -7,9 +7,17 @@ import operator
 #     def __init__(self, filename):
 #         super().__init__(F'Unable to open file {filename}')
 
-class InputError(Exception):
+class DatabaseInputError(Exception):
     def __init__(self, string):
         super().__init__(f"There are non-alphanumeric characters in '{string}' that are not allowed for identifiers in the database.")
+
+class DatabaseReadError(Exception):
+    def __init__(self, tablename):
+        super().__init__(f"The table {tablename} does not exist.")
+
+class DatabaseWriteError(Exception):
+    def __init__(self, tablename):
+        super().__init__(f"The table {tablename} already exists.")
 
 class SQLIdentifier:
     '''Handles values, e.g. parameters, that are given to the SQLite-database'''
@@ -22,7 +30,7 @@ class SQLIdentifier:
         '''Raise error if self.value includes any non-(alphanumerical or "_") character'''
         for char in self.value:
             if not char.isalnum() and not char == '_':
-                raise InputError(self.value)
+                raise DatabaseInputError(self.value)
         return self.value
         # value = self.value.encode('utf-8', 'strict').decode('utf-8')
         # return '"{}"'.format(value.replace('"', '""'))
@@ -41,17 +49,16 @@ class Database:
 
     def __setitem__(self, tablename, table):
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''
-        self.dropTable(tablename)
-        self.createTable(tablename, table.getFields())
+        self._dropTable(tablename)
+        self._createTable(tablename, table.getFields())
         for dataset in table.content:
-            self.insertDatasetIntoTable(tablename, dataset)
+            self._insertDatasetIntoTable(tablename, dataset)
 
     def __getitem__(self, tablename):
         '''Returns SQL-table with <tablename>'''
-        listOfDictionaries = self.getTable(tablename)
         return Table(
-            indexFieldName=self.getPrimaryKeyOfTable(tablename),
-            content=listOfDictionaries
+            indexField=self._getPrimaryKeyOfTable(tablename),
+            content=self._getTable(tablename)
         )
 
     def __enter__(self):
@@ -67,38 +74,46 @@ class Database:
         self.connection.commit()
         return True
 
-    def dropTable(self, tablename):
+    def _dropTable(self, tablename):
         '''Deletes table with name tablename if it exists'''
         self.cursor.execute(f'drop table if exists {SQLIdentifier(tablename)}')
 
-    def createTable(self, tablename, fieldtypes):
+    def _createTable(self, tablename, fieldtypes):
         '''Creates tables with specified fieldtypes'''
         # TODO raise error if table already exists
+        if self._hasTable(tablename):
+            raise DatabaseWriteError(tablename)
         fieldheader = '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
         self.cursor.execute(f'create table {SQLIdentifier(tablename)} {fieldheader}')
 
-    def insertDatasetIntoTable(self, tablename, dataset):
+    def _insertDatasetIntoTable(self, tablename, dataset):
         '''Inserts one dataset into table'''
         # TODO check if fields exist in db-table
         fieldInput = tuple(SQLIdentifier(field) for field in dataset)
         valueInput = '(' + ', '.join('?' for a in tuple(dataset)) + ')'
         self.cursor.execute(f'insert into {SQLIdentifier(tablename)} {fieldInput} values {valueInput}', (tuple(dataset.values())))
+
+    def _hasTable(self, tablename):
+        '''Checks if table exists in db'''
+        hasTable = self.cursor.execute(f'select count(*) from sqlite_master where type="table" and name="{SQLIdentifier(tablename)}"').fetchone()[0]
+        return False if hasTable == 0 else True
         
-    def getTable(self, tablename):
+    def _getTable(self, tablename):
         '''Returns full table as dataframe'''
-        # TODO check if table exists in db
+        if not self._hasTable(tablename):
+            raise DatabaseReadError(tablename)
         dataframe = pd.read_sql(f'select * from {SQLIdentifier(tablename)}', self.connection)
         return dataframe.to_dict(orient='records')
 
-    def getTableinfo(self, tablename):
+    def _getTableinfo(self, tablename):
         '''Returns table-information of table as dataframe'''
         # TODO check if table exists in db
         dataframe = pd.read_sql(f'pragma table_info({SQLIdentifier(tablename)})', self.connection)
         return dataframe.to_dict(orient='records')
 
-    def getPrimaryKeyOfTable(self, tablename):
+    def _getPrimaryKeyOfTable(self, tablename):
         '''Returns fieldname of primary key field in database-table <tablename>'''
-        tableinfo = self.getTableinfo(tablename)
+        tableinfo = self._getTableinfo(tablename)
         for dataset in tableinfo:
             if dataset['pk'] == 1:
                 return dataset['name']
@@ -106,9 +121,9 @@ class Database:
             
 
 class Table:
-    def __init__(self, indexFieldName, txtTypeFields=None, numTypeFields=None, content=None):
+    def __init__(self, indexField, txtTypeFields=None, numTypeFields=None, content=None):
         self.indexedContent = {}
-        self.indexFieldName = indexFieldName
+        self.indexField = indexField
         self.txtTypeFields = set(txtTypeFields or ())
         self.numTypeFields = set(numTypeFields or ())
         self._read(content or [])
@@ -117,7 +132,7 @@ class Table:
     def copy(cls, table):
         '''Copies <table> to this Table instance'''
         return(cls(
-            indexFieldName=''.join(table.indexFieldName),
+            indexField=''.join(table.indexField),
             txtTypeFields={field for field in table.txtTypeFields},
             numTypeFields={field for field in table.numTypeFields},
             content=[{k: v for k, v in x.items()} for x in table.content]
@@ -136,7 +151,7 @@ class Table:
     @property
     def fields(self):
         '''All fieldnames'''
-        return {self.indexFieldName} | self.content_fields
+        return {self.indexField} | self.content_fields
 
     def contentOf(self, keyvalue, columnname):
         '''Return content of field <columnname> in dataset with key <keyvalue> '''
@@ -159,7 +174,7 @@ class Table:
     def _readDataWithUnspecifiedFields(self, data):
         '''Save all <data> in this table and identify its fields'''
         for dataset in data:
-            row_index = int(dataset[self.indexFieldName])
+            row_index = int(dataset[self.indexField])
             self.indexedContent[row_index] = {}
             for k, v in dataset.items():
                 if v is not None:
@@ -169,7 +184,7 @@ class Table:
     def _readDataWithSpecifiedFields(self, data):
         '''Save <data> of specified fields in this table'''
         for dataset in data:
-            self.indexedContent[int(dataset[self.indexFieldName])] = {
+            self.indexedContent[int(dataset[self.indexField])] = {
                 k: v for k, v in dataset.items()
                 if k in self.fields and v is not None
             }
@@ -189,7 +204,7 @@ class Table:
         fieldtypes = {}
         for field in self.fields:
             fieldtype = 'text' if field in self.txtTypeFields else 'numeric'
-            if field == self.indexFieldName:
+            if field == self.indexField:
                 fieldtype += ' primary key'
             fieldtypes[field] = fieldtype
         return fieldtypes
@@ -211,13 +226,13 @@ class Table:
         return (
             sorted(
                 self.content,
-                key=operator.itemgetter(self.indexFieldName)
+                key=operator.itemgetter(self.indexField)
             ) == sorted(
                 table.content,
-                key=operator.itemgetter(self.indexFieldName)
+                key=operator.itemgetter(self.indexField)
             )
         ) and (
-            self.indexFieldName == table.indexFieldName
+            self.indexField == table.indexField
         ) and (
             self.txtTypeFields == table.txtTypeFields
         ) and (

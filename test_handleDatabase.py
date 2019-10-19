@@ -11,7 +11,7 @@ def assertTableEqual(table1, table2):
 class TestTableGetFields(unittest.TestCase):
     def testOneDataset(self):
         table = handleDatabase.Table(
-            indexFieldName='id',
+            indexField='id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit', 'amount': 10}
             ]
@@ -24,7 +24,7 @@ class TestTableGetFields(unittest.TestCase):
 
     def testTwoDatasetsWithDifferentFields(self):
         table = handleDatabase.Table(
-            indexFieldName='id',
+            indexField='id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit', 'amount': 10},
                 {'id': 4, 'place': 'Nicaragua', 'weight': 2.22}
@@ -39,7 +39,7 @@ class TestTableGetFields(unittest.TestCase):
 class TestTableCopy(unittest.TestCase):
     def testCopy(self):
         table = handleDatabase.Table(
-            indexFieldName='id',
+            indexField='id',
             txtTypeFields=['name', 'type'],
             content='"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
         )
@@ -52,7 +52,7 @@ class TestTableCopy(unittest.TestCase):
 class TestTableIO(unittest.TestCase):
     def testReadOneCsvInputLine(self):
         table = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             txtTypeFields=['name', 'type'],
             content = '"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
         )
@@ -65,14 +65,14 @@ class TestTableCombination(unittest.TestCase):
 
     def test_modifyOneEntry_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
 
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
             ]
@@ -81,7 +81,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
             ]
@@ -91,14 +91,14 @@ class TestTableCombination(unittest.TestCase):
         
     def test_modifyOneEntryWithExplicitFieldCheck_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit', 'number': 10}
             ]
         )
 
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
             ]
@@ -107,7 +107,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             numTypeFields = ['number'],
             txtTypeFields = ['name', 'type'],
             content = [
@@ -119,13 +119,13 @@ class TestTableCombination(unittest.TestCase):
 
     def test_modifyTwoEntries_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'newavocado', 'type': 'newfruit'}
             ]
@@ -134,7 +134,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'newavocado', 'type': 'newfruit'}
             ]
@@ -144,13 +144,13 @@ class TestTableCombination(unittest.TestCase):
 
     def test_modifySpecifiedEntry_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             txtTypeFields = ['type'],
             content = [
                 {'id': 0, 'name': 'newavocado', 'type': 'newfruit'}
@@ -160,7 +160,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
             ]
@@ -170,14 +170,14 @@ class TestTableCombination(unittest.TestCase):
 
     def test_modifyOneEntries_twoAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 2, 'name': 'kale', 'type': 'vegetable'},
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
             ]
@@ -186,7 +186,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 2, 'name': 'kale', 'type': 'vegetable'},
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit'}
@@ -197,13 +197,13 @@ class TestTableCombination(unittest.TestCase):
 
     def test_addOneDataset_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 1, 'name': 'kale', 'type': 'vegetable'}
             ]
@@ -212,7 +212,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 1, 'name': 'kale', 'type': 'vegetable'}
@@ -223,14 +223,14 @@ class TestTableCombination(unittest.TestCase):
 
     def test_addOneDataset_twoAndTwoDatasets(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 4, 'name': 'banana', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 1, 'name': 'kale', 'type': 'vegetable'},
                 {'id': 7, 'name': 'salad', 'type': 'vegetable'}
@@ -240,7 +240,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 1, 'name': 'kale', 'type': 'vegetable'},
@@ -253,13 +253,13 @@ class TestTableCombination(unittest.TestCase):
 
     def test_addEntry_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit', 'color': 'green'}
             ]
@@ -269,7 +269,7 @@ class TestTableCombination(unittest.TestCase):
 
         
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit', 'color': 'green'}
             ]
@@ -279,14 +279,14 @@ class TestTableCombination(unittest.TestCase):
 
     def test_addDatasetWithNewEntry_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
 
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 2, 'name': 'kale', 'type': 'vegetable', 'color': 'green'}
             ]
@@ -295,7 +295,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 2, 'name': 'kale', 'type': 'vegetable', 'color': 'green'}
@@ -306,13 +306,13 @@ class TestTableCombination(unittest.TestCase):
 
     def test_addDatasetWithSpecifiedNewEntry_oneAndOneDataset(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'}
             ]
         )
         table2 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             txtTypeFields = ['color'],
             content = [
                 {'id': 2, 'name': 'kale', 'type': 'vegetable', 'color': 'green'}
@@ -322,7 +322,7 @@ class TestTableCombination(unittest.TestCase):
         actual = table1 << table2
 
         expected = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 2, 'color': 'green'}
@@ -334,7 +334,7 @@ class TestTableCombination(unittest.TestCase):
 class TestDatabaseIO(unittest.TestCase):
     def testReadAndWriteFromAndToTable(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'fruit'},
                 {'id': 1, 'name': 'test'}
@@ -349,20 +349,22 @@ class TestDatabaseIO(unittest.TestCase):
 
     def testWritingWithNonvalidFieldName(self):
         table1 = handleDatabase.Table(
-            indexFieldName = 'id',
+            indexField = 'id',
             content = [
                 {'id': 0, 'new type': 'fruit'}
             ]
         )
 
         with handleDatabase.Database('food.db') as db:
-            with self.assertRaises(handleDatabase.InputError):
+            with self.assertRaises(handleDatabase.DatabaseInputError):
                 db['food'] = table1
 
-    # def testReadingFromNonexistingDBTable(self):
-    #     with handleDatabase.Database('food.db') as db:
-    #         table = db['test']
+    def testReadingFromNonexistingDBTable(self):
+        with handleDatabase.Database('food.db') as db:
+            with self.assertRaises(handleDatabase.DatabaseReadError):
+                table = db['test']
 
+    
 class TestSQLIdentifier(unittest.TestCase):
     def testValidString(self):
         string = 'blablablaJaj_akdiepow948833dsfjdfi'
@@ -375,7 +377,7 @@ class TestSQLIdentifier(unittest.TestCase):
     def testInvalidString(self):
         string = 'kifeifiejfi e'
 
-        with self.assertRaises(handleDatabase.InputError):
+        with self.assertRaises(handleDatabase.DatabaseInputError):
             repr(handleDatabase.SQLIdentifier(string))
         
 if __name__ == '__main__':
