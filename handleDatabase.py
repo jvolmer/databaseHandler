@@ -3,10 +3,6 @@ import sqlite3
 import pandas as pd
 import operator
 
-# class FileMissingError(Exception):
-#     def __init__(self, filename):
-#         super().__init__(F'Unable to open file {filename}')
-
 class DatabaseInputError(Exception):
     def __init__(self, string):
         super().__init__(f"There are non-alphanumeric characters in '{string}' that are not allowed for identifiers in the database.")
@@ -32,8 +28,6 @@ class SQLIdentifier:
             if not char.isalnum() and not char == '_':
                 raise DatabaseInputError(self.value)
         return self.value
-        # value = self.value.encode('utf-8', 'strict').decode('utf-8')
-        # return '"{}"'.format(value.replace('"', '""'))
         
 
 class Database:
@@ -80,7 +74,6 @@ class Database:
 
     def _createTable(self, tablename, fieldtypes):
         '''Creates tables with specified fieldtypes'''
-        # TODO raise error if table already exists
         if self._hasTable(tablename):
             raise DatabaseWriteError(tablename)
         fieldheader = '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
@@ -107,7 +100,8 @@ class Database:
 
     def _getTableinfo(self, tablename):
         '''Returns table-information of table as dataframe'''
-        # TODO check if table exists in db
+        if not self._hasTable(tablename):
+            raise DatabaseReadError(tablename)
         dataframe = pd.read_sql(f'pragma table_info({SQLIdentifier(tablename)})', self.connection)
         return dataframe.to_dict(orient='records')
 
