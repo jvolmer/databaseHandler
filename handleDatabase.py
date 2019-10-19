@@ -13,7 +13,8 @@ class InputError(Exception):
 
 class SQLIdentifier:
     '''Handles values, e.g. parameters, that are given to the SQLite-database'''
-
+    # TODO handle dictionaries and tuples as input as well
+    
     def __init__(self, value) -> None:
         self.value = value
 
@@ -29,6 +30,7 @@ class SQLIdentifier:
 
 class Database:
     '''Interacts with the SQLite-Database'''
+    
     def __init__(self, filename: str) -> None:
         self.connection = sqlite3.connect(filename)
         self.cursor = self.connection.cursor()
@@ -66,27 +68,30 @@ class Database:
         return True
 
     def dropTable(self, tablename):
+        '''Deletes table with name tablename if it exists'''
         self.cursor.execute(f'drop table if exists {SQLIdentifier(tablename)}')
 
     def createTable(self, tablename, fieldtypes):
+        '''Creates tables with specified fieldtypes'''
         # TODO raise error if table already exists
         fieldheader = '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
         self.cursor.execute(f'create table {SQLIdentifier(tablename)} {fieldheader}')
 
     def insertDatasetIntoTable(self, tablename, dataset):
+        '''Inserts one dataset into table'''
         # TODO check if fields exist in db-table
         fieldInput = tuple(SQLIdentifier(field) for field in dataset)
         valueInput = '(' + ', '.join('?' for a in tuple(dataset)) + ')'
         self.cursor.execute(f'insert into {SQLIdentifier(tablename)} {fieldInput} values {valueInput}', (tuple(dataset.values())))
         
     def getTable(self, tablename):
-        '''Returns full db-table as dataframe'''
+        '''Returns full table as dataframe'''
         # TODO check if table exists in db
         dataframe = pd.read_sql(f'select * from {SQLIdentifier(tablename)}', self.connection)
         return dataframe.to_dict(orient='records')
 
     def getTableinfo(self, tablename):
-        '''Returns table-information of db-table as dataframe'''
+        '''Returns table-information of table as dataframe'''
         # TODO check if table exists in db
         dataframe = pd.read_sql(f'pragma table_info({SQLIdentifier(tablename)})', self.connection)
         return dataframe.to_dict(orient='records')
