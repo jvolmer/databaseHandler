@@ -18,11 +18,11 @@ class SQLIdentifier:
         self.value = value
 
     def __repr__(self) -> str:
+        '''Raise error if self.value includes any non-(alphanumerical or "_") character'''
         for char in self.value:
-            if not char.isalnum():
+            if not char.isalnum() and not char == '_':
                 raise InputError(self.value)
         return self.value
-            # return ''.join( chr for chr in self.value if chr.isalnum() )
         # value = self.value.encode('utf-8', 'strict').decode('utf-8')
         # return '"{}"'.format(value.replace('"', '""'))
 

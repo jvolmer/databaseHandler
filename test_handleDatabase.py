@@ -348,21 +348,19 @@ class TestDatabase(unittest.TestCase):
         assertTableEqual(table1, table2)
 
 
-    # def testSQLIdentifierValidString(self):
-    #     string = 'blablabla Jajakdiepow948833dsfjdfi'
+    def testSQLIdentifierValidString(self):
+        string = 'blablablaJaj_akdiepow948833dsfjdfi'
 
-    #     expected = string
-    #     actual = str(handleDatabase.SQLIdentifier(string))
+        expected = string
+        actual = str(handleDatabase.SQLIdentifier(string))
 
-    #     self.assertEqual(expected, actual)
+        self.assertEqual(expected, actual)
 
-    # def testSQLIdentifierInvalidString(self):
-    #     string = 'kifei_fiejfie'
+    def testSQLIdentifierInvalidString(self):
+        string = 'kifeifiejfi e'
 
-    #     expected = string
-    #     actual = str(handleDatabase.SQLIdentifier(string))
-
-    #     self.assertEqual(expected, actual)
+        with self.assertRaises(handleDatabase.InputError):
+            str(handleDatabase.SQLIdentifier(string))
         
 if __name__ == '__main__':
     unittest.main()
