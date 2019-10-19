@@ -8,6 +8,34 @@ def assertTableEqual(table1, table2):
         raise AssertionError(f'{table1} +  !=  + {table2}')
 
 
+class TestTableGetFields(unittest.TestCase):
+    def testOneDataset(self):
+        table = handleDatabase.Table(
+            indexFieldName='id',
+            content = [
+                {'id': 0, 'name': 'avocado', 'type': 'fruit', 'amount': 10}
+            ]
+        )
+        expected = {'id': 'integer primary key', 'name': 'text', 'type': 'text', 'amount': 'numeric'}
+            
+        actual = table.getFields()
+
+        self.assertCountEqual(expected, actual)
+
+    def testTwoDatasetsWithDifferentFields(self):
+        table = handleDatabase.Table(
+            indexFieldName='id',
+            content = [
+                {'id': 0, 'name': 'avocado', 'type': 'fruit', 'amount': 10},
+                {'id': 4, 'place': 'Nicaragua', 'weight': 2.22}
+            ]
+        )
+        expected = {'id': 'integer primary key', 'name': 'text', 'type': 'text', 'amount': 'numeric', 'place': 'text', 'weight': 'numeric'}
+            
+        actual = table.getFields()
+
+        self.assertCountEqual(expected, actual)
+
 class TestTableCopy(unittest.TestCase):
     def testCopy(self):
         table = handleDatabase.Table(
@@ -320,13 +348,21 @@ class TestDatabase(unittest.TestCase):
         assertTableEqual(table1, table2)
 
 
-    def testSQLIdentifier(self):
-        string = 'bla8'
+    # def testSQLIdentifierValidString(self):
+    #     string = 'blablabla Jajakdiepow948833dsfjdfi'
 
-        expected = string
-        actual = str(handleDatabase.SQLIdentifier(string))
+    #     expected = string
+    #     actual = str(handleDatabase.SQLIdentifier(string))
 
-        self.assertEqual(expected, actual)
+    #     self.assertEqual(expected, actual)
+
+    # def testSQLIdentifierInvalidString(self):
+    #     string = 'kifei_fiejfie'
+
+    #     expected = string
+    #     actual = str(handleDatabase.SQLIdentifier(string))
+
+    #     self.assertEqual(expected, actual)
         
 if __name__ == '__main__':
     unittest.main()

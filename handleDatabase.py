@@ -46,10 +46,16 @@ class Database:
         dataframe = pd.read_sql(sqlString, self.connection)
         return dataframe.to_dict(orient='records')
 
+    @staticmethod
+    def createFieldheaderString(table):
+        '''Creates a string of fieldnames and types of table that can be used to create a db-table'''
+        fieldtypes = table.getFields()
+        return '(' + ', '.join(field + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
+    
     def __setitem__(self, tablename, table):
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''
         self.cursor.execute(f'drop table if exists {tablename}')
-        self.cursor.execute(f'create table food {table.getFieldTypes()}')
+        self.cursor.execute(f'create table food {self.createFieldheaderString(table)}')
         for dataset in table.content:
             self.cursor.execute(f'insert into {tablename} {tuple(dataset.keys())} values ({", ".join("?" for a in tuple(dataset))})', (tuple(dataset.values())))
 
@@ -135,7 +141,6 @@ class Table:
 
     def _readDataWithUnspecifiedFields(self, data):
         '''Save all <data> in this table and identify its fields'''
-        # TODO what if table already includes data
         for dataset in data:
             row_index = int(dataset[self.indexFieldName])
             self.indexedContent[row_index] = {}
@@ -146,7 +151,6 @@ class Table:
 
     def _readDataWithSpecifiedFields(self, data):
         '''Save <data> of specified fields in this table'''
-        # TODO what if table already includes data
         for dataset in data:
             self.indexedContent[int(dataset[self.indexFieldName])] = {
                 k: v for k, v in dataset.items()
@@ -163,18 +167,15 @@ class Table:
         else:
             self._readDataWithSpecifiedFields(reader)
 
-    # TODO: rewrite this using join
-    def getFieldTypes(self):
-        '''Returns string of fields with fieldtypes that can be used to create fitting SQL-table'''
-        string = ''
+    def getFields(self):
+        '''Returns all fields with fieldtypes'''
+        fieldtypes = {}
         for field in self.fields:
-            fieldtype = 'text' if field in self.txtTypeFields else 'integer'
+            fieldtype = 'text' if field in self.txtTypeFields else 'numeric'
             if field == self.indexFieldName:
                 fieldtype += ' primary key'
-            string += '(' if not string else ', '
-            string += field + ' ' + fieldtype
-        string += ')'
-        return string
+            fieldtypes[field] = fieldtype
+        return fieldtypes
 
     def __lshift__(self, table):
         '''Returns a tables that is this table, overwritte by <table>'''
