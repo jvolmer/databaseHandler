@@ -359,6 +359,9 @@ class TestDatabaseIO(unittest.TestCase):
             with self.assertRaises(handleDatabase.InputError):
                 db['food'] = table1
 
+    # def testReadingFromNonexistingDBTable(self):
+    #     with handleDatabase.Database('food.db') as db:
+    #         table = db['test']
 
 class TestSQLIdentifier(unittest.TestCase):
     def testValidString(self):

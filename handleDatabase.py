@@ -37,38 +37,16 @@ class Database:
         '''Close database'''
         self.connection.close()
 
-    # def execute(self, sqlString) -> None:
-    #     '''Executes an SQL-command'''
-    #     self.cursor.execute(sqlString)
-
-    def getData(self, sqlString):
-        '''Executes an SQL-command and returns the result as dataframe'''
-        dataframe = pd.read_sql(sqlString, self.connection)
-        return dataframe.to_dict(orient='records')
-
-    @staticmethod
-    def createFieldheaderString(table):
-        '''Creates a string of fieldnames and types of table to be used to create a db-table'''
-        fieldtypes = table.getFields()
-        return '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
-    
     def __setitem__(self, tablename, table):
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''
-        self.cursor.execute(f'drop table if exists {tablename}')
-        self.cursor.execute(f'create table food {self.createFieldheaderString(table)}')
+        self.dropTable(tablename)
+        self.cursor.execute(f'create table {tablename} {self.createFieldheaderString(table)}')
         for dataset in table.content:
             self.cursor.execute(f'insert into {tablename} {tuple(dataset.keys())} values ({", ".join("?" for a in tuple(dataset))})', (tuple(dataset.values())))
 
-    def getPrimaryKeyOfTable(self, tablename):
-        '''Returns fieldname of primary key field in database-table <tablename>'''
-        tableinfo = self.getData(f'pragma table_info({tablename})')
-        for dataset in tableinfo:
-            if dataset['pk'] == 1:
-                return dataset['name']
-
     def __getitem__(self, tablename):
         '''Returns SQL-table with <tablename>'''
-        listOfDictionaries = self.getData(f"select * from {tablename}")
+        listOfDictionaries = self.getTable(tablename)
         return Table(
             indexFieldName=self.getPrimaryKeyOfTable(tablename),
             content=listOfDictionaries
@@ -86,6 +64,37 @@ class Database:
             return False
         self.connection.commit()
         return True
+
+    def dropTable(self, tablename):
+        self.cursor.execute(f'drop table if exists {SQLIdentifier(tablename)}')
+        
+    def getTable(self, tablename):
+        '''Returns full db-table as dataframe'''
+        # TODO check if table exists in db
+        dataframe = pd.read_sql(f'select * from {SQLIdentifier(tablename)}', self.connection)
+        return dataframe.to_dict(orient='records')
+
+    def getTableinfo(self, tablename):
+        '''Returns table-information of db-table as dataframe'''
+        # TODO check if table exists in db
+        dataframe = pd.read_sql(f'pragma table_info({SQLIdentifier(tablename)})', self.connection)
+        return dataframe.to_dict(orient='records')
+
+
+    @staticmethod
+    def createFieldheaderString(table):
+        '''Creates a string of fieldnames and types of table to be used to create a db-table'''
+        fieldtypes = table.getFields()
+        return '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
+    
+
+    def getPrimaryKeyOfTable(self, tablename):
+        '''Returns fieldname of primary key field in database-table <tablename>'''
+        tableinfo = self.getTableinfo(tablename)
+        for dataset in tableinfo:
+            if dataset['pk'] == 1:
+                return dataset['name']
+
             
 
 class Table:
