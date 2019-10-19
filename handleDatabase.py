@@ -40,9 +40,9 @@ class Database:
     def __setitem__(self, tablename, table):
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''
         self.dropTable(tablename)
-        self.cursor.execute(f'create table {tablename} {self.createFieldheaderString(table)}')
+        self.createTable(tablename, table.getFields())
         for dataset in table.content:
-            self.cursor.execute(f'insert into {tablename} {tuple(dataset.keys())} values ({", ".join("?" for a in tuple(dataset))})', (tuple(dataset.values())))
+            self.insertDatasetIntoTable(tablename, dataset)
 
     def __getitem__(self, tablename):
         '''Returns SQL-table with <tablename>'''
@@ -67,6 +67,17 @@ class Database:
 
     def dropTable(self, tablename):
         self.cursor.execute(f'drop table if exists {SQLIdentifier(tablename)}')
+
+    def createTable(self, tablename, fieldtypes):
+        # TODO raise error if table already exists
+        fieldheader = '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
+        self.cursor.execute(f'create table {SQLIdentifier(tablename)} {fieldheader}')
+
+    def insertDatasetIntoTable(self, tablename, dataset):
+        # TODO check if fields exist in db-table
+        fieldInput = tuple(SQLIdentifier(field) for field in dataset)
+        valueInput = '(' + ', '.join('?' for a in tuple(dataset)) + ')'
+        self.cursor.execute(f'insert into {SQLIdentifier(tablename)} {fieldInput} values {valueInput}', (tuple(dataset.values())))
         
     def getTable(self, tablename):
         '''Returns full db-table as dataframe'''
@@ -79,14 +90,6 @@ class Database:
         # TODO check if table exists in db
         dataframe = pd.read_sql(f'pragma table_info({SQLIdentifier(tablename)})', self.connection)
         return dataframe.to_dict(orient='records')
-
-
-    @staticmethod
-    def createFieldheaderString(table):
-        '''Creates a string of fieldnames and types of table to be used to create a db-table'''
-        fieldtypes = table.getFields()
-        return '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
-    
 
     def getPrimaryKeyOfTable(self, tablename):
         '''Returns fieldname of primary key field in database-table <tablename>'''
