@@ -238,24 +238,12 @@ class Table:
 
 
 if __name__ == '__main__':
-    pass
-    # try:
-    #     food = DatabaseUpdate(
-    #         'food.csv',
-    #         txtTypeFields=['name', 'type', 'family'],
-    #         int_fields=[]
-    #     )
-    # except FileMissingError as error:
-    #     print(F'Error: {error}')
-    # else:
-    #     with Database('food.db') as db:
-    #         db['food'].update(food)
+    food = Table(
+        indexField='id',
+        content = [
+            {'id': 0, 'name': 'avocado', 'type': 'fruit', 'amount': 10}
+        ]
+    )
+    with Database('food.db') as db:
+        db['food'] = food
 
-
-
-# class JunctionTable(Table):
-#       def
-
-# class ToolTable(Table):
-#       def __init(name, sqlCursor)
-#       def createAndFill(csvReader)
