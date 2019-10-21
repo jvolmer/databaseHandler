@@ -2,6 +2,8 @@ import csv
 import sqlite3
 import pandas as pd
 import operator
+import io
+import ast
 
 class DatabaseInputError(Exception):
     def __init__(self, string):
@@ -15,6 +17,10 @@ class DatabaseWriteError(Exception):
     def __init__(self, tablename):
         super().__init__(f"The table {tablename} already exists.")
 
+class TableKeyError(Exception):
+    def __init__(self):
+        super().__init__(f"Type of index field is not specified.")
+        
 class SQLIdentifier:
     '''Handles values, e.g. parameters, that are given to the SQLite-database'''
     # TODO handle dictionaries and tuples as input as well
@@ -120,6 +126,8 @@ class Table:
         self.indexField = indexField
         self.txtTypeFields = set(txtTypeFields or ())
         self.numTypeFields = set(numTypeFields or ())
+        if not self.fields == set() and self.indexField not in self.fields:
+            raise TableKeyError
         self._read(content or [])
 
     @classmethod
@@ -138,76 +146,15 @@ class Table:
         return list(self.indexedContent.values())
 
     @property
-    def content_fields(self):
-        '''All fieldnames with content (meaning: all but key field)'''
-        return self.txtTypeFields | self.numTypeFields
-
-    @property
     def fields(self):
         '''All fieldnames'''
-        return {self.indexField} | self.content_fields
-
-    def contentOf(self, keyvalue, columnname):
-        '''Return content of field <columnname> in dataset with key <keyvalue> '''
-        try:
-            return self.indexedContent[keyvalue][columnname]
-        except KeyError:
-            return None
-
-    def _addField(self, field, fieldType):
-        '''Add <field> to table with type <fieldType>'''
-        if field not in self.fields:
-            if issubclass(fieldType, str):
-                self.txtTypeFields.add(field)
-            else:
-                assert issubclass(fieldType, (int, float)), (
-                    'unexpected field type passed to addField'
-                )
-                self.numTypeFields.add(field)
-
-    def _readDataWithUnspecifiedFields(self, data):
-        '''Save all <data> in this table and identify its fields'''
-        for dataset in data:
-            row_index = int(dataset[self.indexField])
-            self.indexedContent[row_index] = {}
-            for k, v in dataset.items():
-                if v is not None:
-                    self.indexedContent[row_index][k] = v
-                    self._addField(k, type(v))
-
-    def _readDataWithSpecifiedFields(self, data):
-        '''Save <data> of specified fields in this table'''
-        for dataset in data:
-            self.indexedContent[int(dataset[self.indexField])] = {
-                k: v for k, v in dataset.items()
-                if k in self.fields and v is not None
-            }
-
-    def _read(self, data):
-        if isinstance(data, str):
-            reader = csv.DictReader(data.splitlines(), delimiter='|', quotechar='"')
-        else:
-            reader = data
-        if not self.content_fields:
-            self._readDataWithUnspecifiedFields(reader)
-        else:
-            self._readDataWithSpecifiedFields(reader)
-
-    def getFields(self):
-        '''Returns all fields with fieldtypes'''
-        fieldtypes = {}
-        for field in self.fields:
-            fieldtype = 'text' if field in self.txtTypeFields else 'numeric'
-            if field == self.indexField:
-                fieldtype += ' primary key'
-            fieldtypes[field] = fieldtype
-        return fieldtypes
+        return self.txtTypeFields | self.numTypeFields
 
     def __lshift__(self, table):
         '''Returns a tables that is this table, overwritte by <table>'''
         resultTable = Table.copy(self)
         for i in table.indexedContent:
-            for columnToUpdate in table.content_fields:
+            for columnToUpdate in table.fields:
                 fieldType = str if columnToUpdate in table.txtTypeFields else int
                 resultTable._addField(columnToUpdate, fieldType)
                 if i in resultTable.indexedContent:
@@ -236,7 +183,83 @@ class Table:
     def __repr__(self):
         return str(self.content)
 
+    def contentOf(self, keyvalue, columnname):
+        '''Return content of field <columnname> in dataset with key <keyvalue> '''
+        try:
+            return self.indexedContent[keyvalue][columnname]
+        except KeyError:
+            return None
 
+    def getFields(self):
+        '''Returns all fields with fieldtypes'''
+        fieldtypes = {}
+        for field in self.fields:
+            fieldtype = 'text' if field in self.txtTypeFields else 'numeric'
+            if field == self.indexField:
+                fieldtype += ' primary key'
+            fieldtypes[field] = fieldtype
+        return fieldtypes
+
+    def _addField(self, field, fieldType):
+        '''Add <field> to table with type <fieldType>'''
+        if field not in self.fields:
+            if issubclass(fieldType, str):
+                self.txtTypeFields.add(field)
+            else:
+                assert issubclass(fieldType, (int, float)), (
+                    'unexpected field type passed to addField'
+                )
+                self.numTypeFields.add(field)
+
+    def _read(self, data):
+        if isinstance(data, str):
+            reader = csv.DictReader(data.splitlines(), delimiter='|', quotechar='"')
+        else:
+            reader = data
+        if not self.fields:
+            self._readDataWithUnspecifiedFields(reader)
+        else:
+            self._readDataWithSpecifiedFields(reader)
+
+    def _readDataWithUnspecifiedFields(self, data):
+        '''Save all <data> in this table and identify its fields'''
+        for dataset in data:
+            row_index = dataset[self.indexField]
+            self.indexedContent[row_index] = {}
+            for k, v in dataset.items():
+                if v is not None:
+                    self.indexedContent[row_index][k] = v
+                    self._addField(k, type(v))
+
+    def _readDataWithSpecifiedFields(self, data):
+        '''Save <data> of specified fields in this table'''
+        for dataset in data:
+            row_index = dataset[self.indexField]
+            self.indexedContent[row_index] = {}
+            for k, v in dataset.items():
+                if v is not None and k in self.fields:
+                    if isinstance(v, str) and k in self.numTypeFields:
+                        value = ast.literal_eval(v)
+                        assert isinstance(value, (int, float))
+                        self.indexedContent[row_index][k] = value
+                    else:
+                        self.indexedContent[row_index][k] = v
+
+
+    def toCsv(self):
+        output = io.StringIO()
+        fieldnames = [self.indexField] + list(self.fields-set([self.indexField]))
+        writer = csv.DictWriter(output,
+                                fieldnames=fieldnames,
+                                delimiter='|',
+                                lineterminator='\n',                                
+                                quoting=csv.QUOTE_NONNUMERIC,
+                                quotechar='"'
+        )
+        writer.writeheader()
+        writer.writerows(self.content)
+        return output.getvalue()
+        
 if __name__ == '__main__':
     food = Table(
         indexField='id',

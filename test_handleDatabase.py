@@ -36,31 +36,90 @@ class TestTableGetFields(unittest.TestCase):
 
         self.assertCountEqual(expected, actual)
 
+        
 class TestTableCopy(unittest.TestCase):
     def testCopy(self):
         table = handleDatabase.Table(
             indexField='id',
-            txtTypeFields=['name', 'type'],
-            content='"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
+            content=[
+                {'id': '0', 'name' : 'avocado', 'type' : 'fruit'}
+            ]
         )
 
         table2 = handleDatabase.Table.copy(table)
 
         assertTableEqual(table, table2)
 
-
+        
 class TestTableIO(unittest.TestCase):
     def testReadOneCsvInputLine(self):
-        table = handleDatabase.Table(
-            indexField = 'id',
-            txtTypeFields=['name', 'type'],
-            content = '"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
+        actual = handleDatabase.Table(
+            indexField='id',
+            txtTypeFields = ['name', 'type'],
+            numTypeFields = ['id'],
+            content='"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
         )
 
-        expected = [{'id': '0', 'name' : 'avocado', 'type' : 'fruit'}]
-        actual = table.content
-        self.assertCountEqual(actual, expected)
+        expected = handleDatabase.Table(
+            indexField='id',
+            content = [
+                {'id': 0, 'name' : 'avocado', 'type' : 'fruit'}
+            ]
+        )
+        assertTableEqual(actual, expected)
 
+    def testWriteToCsvOutput(self):
+        table = handleDatabase.Table(
+            indexField = 'id',
+            content = [
+                {'id': 0, 'name' : 'avocado', 'type' : 'fruit'}
+            ]
+        )
+
+        expected = '"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
+
+        actual = table.toCsv()
+        self.assertEqual(actual, expected)
+
+
+class TestTableIndexField(unittest.TestCase):
+    def testCreateTextIndexField(self):
+        actual = handleDatabase.Table(
+            indexField = 'name',
+            content = [
+                {'name': 'Julia', 'age': 31}
+            ]
+        )
+
+        expected = handleDatabase.Table(
+            indexField = 'name',
+            txtTypeFields = ['name'],
+            numTypeFields = ['age'],
+            content = [
+                {'name': 'Julia', 'age': 31}
+            ]
+        )
+
+        assertTableEqual(actual, expected)
+        
+    def testDoubleIndex(self):
+        actual = handleDatabase.Table(
+            indexField = 'id',
+            content = [
+                {'id': 0, 'name': 'avocado', 'type': 'fruit'},
+                {'id': 0, 'name': 'kale', 'type': 'vegetable'}
+            ]
+        )
+
+        expected = handleDatabase.Table(
+            indexField = 'id',
+            content = [
+                {'id': 0, 'name': 'kale', 'type': 'vegetable'}
+            ]
+        )
+
+        assertTableEqual(actual, expected)
+        
 class TestTableCombination(unittest.TestCase):
 
     def test_modifyOneEntry_oneAndOneDataset(self):
@@ -108,7 +167,7 @@ class TestTableCombination(unittest.TestCase):
 
         expected = handleDatabase.Table(
             indexField = 'id',
-            numTypeFields = ['number'],
+            numTypeFields = ['number', 'id'],
             txtTypeFields = ['name', 'type'],
             content = [
                 {'id': 0, 'name': 'avocado', 'type': 'newfruit', 'number': 10}
@@ -152,13 +211,14 @@ class TestTableCombination(unittest.TestCase):
         table2 = handleDatabase.Table(
             indexField = 'id',
             txtTypeFields = ['type'],
+            numTypeFields = ['id'],
             content = [
                 {'id': 0, 'name': 'newavocado', 'type': 'newfruit'}
             ]
         )
         
         actual = table1 << table2
-
+        
         expected = handleDatabase.Table(
             indexField = 'id',
             content = [
@@ -314,6 +374,7 @@ class TestTableCombination(unittest.TestCase):
         table2 = handleDatabase.Table(
             indexField = 'id',
             txtTypeFields = ['color'],
+            numTypeFields = ['id'],
             content = [
                 {'id': 2, 'name': 'kale', 'type': 'vegetable', 'color': 'green'}
             ]
