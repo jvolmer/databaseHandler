@@ -1,7 +1,7 @@
 import unittest
 import handleDatabase
 import sqlite3
-
+import io
 
 def assertTableEqual(table1, table2):
     if not table1 == table2:
@@ -78,8 +78,30 @@ class TestTableIO(unittest.TestCase):
 
         expected = '"id"|"name"|"type"\n0|"avocado"|"fruit"\n'
 
-        actual = table.toCsv()
-        self.assertEqual(actual, expected)
+        actual = table.toCsv(io.StringIO())
+        self.assertEqual(actual.getvalue(), expected)
+
+    def testWriteAndReadCsvFile(self):
+
+        expected = handleDatabase.Table(
+            indexField='id',
+            content = [
+                {'id': 0, 'name' : 'avocado', 'type' : 'fruit'}
+            ]
+        )
+
+        with open('csv.csv', 'w+', encoding='utf-8') as f:
+            expected.toCsv(f)
+
+        with open('csv.csv', 'r', encoding='utf-8') as f:
+            actual = handleDatabase.Table(
+                indexField='id',
+                txtTypeFields = ['name', 'type'],
+                numTypeFields = ['id'],
+                content=f
+            )
+            
+            assertTableEqual(actual, expected)
 
 
 class TestTableIndexField(unittest.TestCase):

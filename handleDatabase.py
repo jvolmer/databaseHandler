@@ -214,6 +214,8 @@ class Table:
     def _read(self, data):
         if isinstance(data, str):
             reader = csv.DictReader(data.splitlines(), delimiter='|', quotechar='"')
+        elif isinstance(data, io.IOBase):
+            reader = csv.DictReader(data, delimiter='|', quotechar='"')
         else:
             reader = data
         if not self.fields:
@@ -246,10 +248,9 @@ class Table:
                         self.indexedContent[row_index][k] = v
 
 
-    def toCsv(self):
-        output = io.StringIO()
-        fieldnames = [self.indexField] + list(self.fields-set([self.indexField]))
-        writer = csv.DictWriter(output,
+    def toCsv(self, location):
+        fieldnames = [self.indexField] + sorted(list(self.fields-set([self.indexField])))
+        writer = csv.DictWriter(location,
                                 fieldnames=fieldnames,
                                 delimiter='|',
                                 lineterminator='\n',                                
@@ -258,7 +259,7 @@ class Table:
         )
         writer.writeheader()
         writer.writerows(self.content)
-        return output.getvalue()
+        return location
         
 if __name__ == '__main__':
     food = Table(
