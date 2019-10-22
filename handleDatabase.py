@@ -4,6 +4,7 @@ import pandas as pd
 import operator
 import io
 import ast
+import typing
 
 class DatabaseInputError(Exception):
     def __init__(self, string):
@@ -25,7 +26,7 @@ class SQLIdentifier:
     '''Handles values, e.g. parameters, that are given to the SQLite-database'''
     # TODO handle dictionaries and tuples as input as well
     
-    def __init__(self, value) -> None:
+    def __init__(self, value: str) -> None:
         self.value = value
 
     def __repr__(self) -> str:
@@ -47,24 +48,24 @@ class Database:
         '''Close database'''
         self.connection.close()
 
-    def __setitem__(self, tablename, table):
+    def __setitem__(self, tablename: str, table: 'Table') -> None:
         '''Safes <table> in SQL-database with <tablename> (overwrite if table already exists)'''
         self._dropTable(tablename)
         self._createTable(tablename, table.getFields())
         for dataset in table.content:
             self._insertDatasetIntoTable(tablename, dataset)
 
-    def __getitem__(self, tablename):
+    def __getitem__(self, tablename: str) -> None:
         '''Returns SQL-table with <tablename>'''
         return Table(
             indexField=self._getPrimaryKeyOfTable(tablename),
             content=self._getTable(tablename)
         )
 
-    def __enter__(self):
+    def __enter__(self) -> 'Database':
         return self
 
-    def __exit__(self, exceptionType, exceptionValue, traceback):
+    def __exit__(self, exceptionType, exceptionValue, traceback) -> bool:
         '''Commits database changes if not exception is raised, otherwise rolls back changes'''
         if exceptionValue:
             self.connection.rollback()
@@ -74,18 +75,18 @@ class Database:
         self.connection.commit()
         return True
 
-    def _dropTable(self, tablename):
+    def _dropTable(self, tablename: str) -> None:
         '''Deletes table with name tablename if it exists'''
         self.cursor.execute(f'drop table if exists {SQLIdentifier(tablename)}')
 
-    def _createTable(self, tablename, fieldtypes):
+    def _createTable(self, tablename: str, fieldtypes: typing.Dict[str, str]) -> None: 
         '''Creates tables with specified fieldtypes'''
         if self._hasTable(tablename):
             raise DatabaseWriteError(tablename)
         fieldheader = '(' + ', '.join(repr(SQLIdentifier(field)) + ' ' + fieldtypes[field] for field in fieldtypes) + ')'
         self.cursor.execute(f'create table {SQLIdentifier(tablename)} {fieldheader}')
 
-    def _insertDatasetIntoTable(self, tablename, dataset):
+    def _insertDatasetIntoTable(self, tablename: str, dataset): # typing.List[typing.Dict[str, (str, int, float)]]):
         '''Inserts one dataset into table'''
         # TODO check if fields exist in db-table
         fieldInput = tuple(SQLIdentifier(field) for field in dataset)
